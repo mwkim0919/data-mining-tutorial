@@ -45,7 +45,24 @@ def manhattan(user1: dict, user2: dict) -> float:
   return distance
 
 
-def computeNearestNeighbor(username: str, users: dict) -> list:
+def minkowski(user1: dict, user2: dict, r: float) -> float:
+  """
+  Compute the Minkowski distance.
+  :return: Minkowski distance
+  """
+  distance = 0
+  commonRating = False
+  for artist in user1:
+    if artist in user2:
+      distance += pow(abs(user1[artist] - user2[artist]), r)
+      commonRating = True
+  if commonRating:
+    return pow(distance, 1/r)
+  else:
+    return 0.0
+
+
+def computeNearestNeighbor(username: str, users: dict, rating: int) -> list:
   """
   Create a sorted list of users based on their distance to username
   :return: list of users with similar preference
@@ -53,19 +70,19 @@ def computeNearestNeighbor(username: str, users: dict) -> list:
   distances = []
   for user in users:
     if user != username:
-      distance = manhattan(users[user], users[username])
+      distance = minkowski(users[user], users[username], rating)
       distances.append((distance, user))
   distances.sort()
   # print(distances)
   return distances
 
 
-def recommend(username: str, users: dict) -> list:
+def recommend(username: str, users: dict, rating: int) -> list:
   """
   Give list of recommendations.
   :return: list of artist recommendation
   """
-  nearest = computeNearestNeighbor(username, users)[0][1]
+  nearest = computeNearestNeighbor(username, users, rating)[0][1]
   recommendations = []
   neighborRatings = users[nearest]
   userRatings = users[username]
@@ -82,10 +99,12 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('user',
                     help='Provide one of the user: {' + ' '.join(users.keys()) + '}')
+  parser.add_argument('--rating', '-r', default=1,
+                    help='Provide one of the user: {' + ' '.join(users.keys()) + '}')
   args = parser.parse_args()
   printDataSet(users)
   print(colorama.Fore.YELLOW + args.user + '\'s Artist Recommendation: ')
-  print(colorama.Fore.GREEN + str(recommend(args.user, users)))
+  print(colorama.Fore.GREEN + str(recommend(args.user, users, float(args.rating))))
 
 
 if __name__ == '__main__':
