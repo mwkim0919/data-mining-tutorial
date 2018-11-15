@@ -1,5 +1,6 @@
 import argparse
 import colorama
+from math import *
 from tabulate import tabulate
 
 colorama.init(autoreset=True)
@@ -45,6 +46,34 @@ def manhattan(user1: dict, user2: dict) -> float:
   return distance
 
 
+def pearson(rating1: dict, rating2: dict) -> float:
+  """
+  Compute Pearson Correlation Coefficient.
+  (Reducing variability. e.g. Does Hailey's 4 mean the same as Jordyn's 4?)
+  :return: Pearson Correlation Coefficient
+  """
+  sum_xy = sum_x = sum_y = sum_x2 = sum_y2 = n = 0
+  for artist in rating1:
+    if artist in rating2:
+      n += 1
+      x = rating1[artist]
+      y = rating2[artist]
+      sum_xy += x * y
+      sum_x += x
+      sum_y += y
+      sum_x2 += x**2
+      sum_y2 += y**2
+
+  if n == 0:
+    return 0
+  
+  denominator = sqrt(sum_x2 - (sum_x**2) / n) * sqrt(sum_y2 - (sum_y**2) / n)
+  if denominator == 0:
+    return 0
+  else:
+    return (sum_xy - (sum_x * sum_y) / n) / denominator
+
+
 def minkowski(user1: dict, user2: dict, r: float) -> float:
   """
   Compute the Minkowski distance.
@@ -62,7 +91,7 @@ def minkowski(user1: dict, user2: dict, r: float) -> float:
     return 0.0
 
 
-def computeNearestNeighbor(username: str, users: dict, rating: int) -> list:
+def computeNearestNeighbor(username: str, users: dict, exponent: int) -> list:
   """
   Create a sorted list of users based on their distance to username
   :return: list of users with similar preference
@@ -70,19 +99,18 @@ def computeNearestNeighbor(username: str, users: dict, rating: int) -> list:
   distances = []
   for user in users:
     if user != username:
-      distance = minkowski(users[user], users[username], rating)
+      distance = minkowski(users[user], users[username], exponent)
       distances.append((distance, user))
   distances.sort()
-  # print(distances)
   return distances
 
 
-def recommend(username: str, users: dict, rating: int) -> list:
+def recommend(username: str, users: dict, exponent: int) -> list:
   """
   Give list of recommendations.
   :return: list of artist recommendation
   """
-  nearest = computeNearestNeighbor(username, users, rating)[0][1]
+  nearest = computeNearestNeighbor(username, users, exponent)[0][1]
   recommendations = []
   neighborRatings = users[nearest]
   userRatings = users[username]
@@ -99,13 +127,21 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('user',
                     help='Provide one of the user: {' + ' '.join(users.keys()) + '}')
-  parser.add_argument('--rating', '-r', default=1,
+  parser.add_argument('--exponent', '-e', default=1,
+                    help='Provide the exponent to be used. (e.g. 1 = Manhattan, 2 = Euclidean)')
+  parser.add_argument('--pearson', '-p', action='store_true',
+                    help='Just invoke Pearson Correlation. This will need -r1 & -r2.')
+  parser.add_argument('--rating1', '-r1', default='',
+                    help='Provide one of the user: {' + ' '.join(users.keys()) + '}')
+  parser.add_argument('--rating2', '-r2', default='',
                     help='Provide one of the user: {' + ' '.join(users.keys()) + '}')
   args = parser.parse_args()
   printDataSet(users)
-  print(colorama.Fore.YELLOW + args.user + '\'s Artist Recommendation: ')
-  print(colorama.Fore.GREEN + str(recommend(args.user, users, float(args.rating))))
-
+  if not args.pearson:
+    print(colorama.Fore.YELLOW + args.user + '\'s Artist Recommendation: ')
+    print(colorama.Fore.GREEN + str(recommend(args.user, users, float(args.exponent))))
+  else:
+    print(colorama.Fore.GREEN + str(pearson(users[args.rating1], users[args.rating2])))
 
 if __name__ == '__main__':
   main()
